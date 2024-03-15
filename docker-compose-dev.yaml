@@ -16,13 +16,13 @@ services:
     image: client:latest
     entrypoint: /client
     environment:
-      - CLI_ID=1
+      - CLI_ID=0
       - CLI_LOG_LEVEL=DEBUG
     networks:
       - testing_net
     depends_on:
       - server
-      
+
   client1:
     container_name: client1
     image: client:latest
@@ -34,19 +34,19 @@ services:
       - testing_net
     depends_on:
       - server
-      
+
   client2:
     container_name: client2
     image: client:latest
     entrypoint: /client
     environment:
-      - CLI_ID=1
+      - CLI_ID=2
       - CLI_LOG_LEVEL=DEBUG
     networks:
       - testing_net
     depends_on:
       - server
-      
+
 networks:
   testing_net:
     ipam:
