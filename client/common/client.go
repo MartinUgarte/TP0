@@ -58,11 +58,12 @@ func (c *Client) StartClientLoop() {
 	sig_ch := make(chan os.Signal, 1)
 	signal.Notify(sig_ch, syscall.SIGTERM)
 
+	sigterm_received := false 
+
 	go func() {
 		<- sig_ch
 		log.Infof("Signal SIGTERM received")
-		c.conn.Close()
-		return
+		sigterm_received = true
 	}()
 
 	loop:
@@ -75,6 +76,11 @@ func (c *Client) StartClientLoop() {
 					)
 					break loop
 				default:
+			}
+
+			if sigterm_received {
+				log.Infof("Exiting loop due to SIGTERM")
+				break loop
 			}
 
 			// Create the connection the server in every loop iteration. Send an
