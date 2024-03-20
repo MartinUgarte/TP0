@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"os"
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -87,6 +88,19 @@ func PrintConfig(v *viper.Viper) {
     )
 }
 
+func GetBet() *common.Bet {
+	logrus.Infof("name: %s", os.Getenv("NAME"))
+	b := common.NewBet(
+		os.Getenv("NAME"),
+		os.Getenv("SURNAME"),
+		os.Getenv("DOCUMENT"),
+		os.Getenv("BIRTHDAY"),
+		os.Getenv("NUMBER"),
+	)
+	b.LogBet()
+	return b
+}
+
 func main() {
 	v, err := InitConfig()
 	if err != nil {
@@ -107,6 +121,9 @@ func main() {
 		LoopPeriod:    v.GetDuration("loop.period"),
 	}
 
+	bet := GetBet()
+	
 	client := common.NewClient(clientConfig)
+
 	client.StartClientLoop()
 }
