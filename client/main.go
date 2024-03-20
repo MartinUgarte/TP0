@@ -89,7 +89,6 @@ func PrintConfig(v *viper.Viper) {
 }
 
 func GetBet() *common.Bet {
-	logrus.Infof("name: %s", os.Getenv("NAME"))
 	b := common.NewBet(
 		os.Getenv("NAME"),
 		os.Getenv("SURNAME"),
@@ -123,7 +122,7 @@ func main() {
 
 	bet := GetBet()
 	
-	client := common.NewClient(clientConfig)
+	client := common.NewClient(clientConfig, bet)
 
 	client.StartClientLoop()
 }
