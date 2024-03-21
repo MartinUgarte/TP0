@@ -90,13 +90,14 @@ func PrintConfig(v *viper.Viper) {
 
 func GetBet() *common.Bet {
 	b := common.NewBet(
+		os.Getenv("CLI_ID"),
 		os.Getenv("NAME"),
 		os.Getenv("SURNAME"),
 		os.Getenv("DOCUMENT"),
 		os.Getenv("BIRTHDAY"),
 		os.Getenv("NUMBER"),
 	)
-	b.LogBet()
+	b.Log()
 	return b
 }
 

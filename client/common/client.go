@@ -11,6 +11,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+const (
+	SIZE_SEPARATOR = " "
+)
+
 // ClientConfig Configuration used by the client
 type ClientConfig struct {
 	ID            string
@@ -54,27 +58,28 @@ func (c *Client) createClientSocket() error {
 
 // StartClientLoop Send messages to the client until some time threshold is met
 func (c *Client) StartClientLoop() {
-	// autoincremental msgID to identify every message sent
-	// msgID := 1
-
 	sig_ch := make(chan os.Signal, 1)
 	signal.Notify(sig_ch, syscall.SIGTERM)
+
+	sigterm_received := false 
 
 	go func() {
 		<- sig_ch
 		log.Infof("Signal SIGTERM received")
-		c.conn.Close()
-		return
+		sigterm_received = true
 	}()
 
 	// Create the connection the server in every loop iteration. Send an
 	c.createClientSocket()
 
-	// TODO: Modify the send to avoid short-write
+	bet_info := c.bet.Serialize()
+	
+	log.Infof("id: %s | len id: %d", c.config.ID, len(c.config.ID))
+	message := fmt.Sprintf("%d%s%s", len(bet_info), SIZE_SEPARATOR, bet_info)
+
 	fmt.Fprintf(
 		c.conn,
-		"[CLIENT %v] Te voy a mandar el bet\n",
-		c.config.ID,
+		message,
 	)
 
 	msg, err := bufio.NewReader(c.conn).ReadString('\n')

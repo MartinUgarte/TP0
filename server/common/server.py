@@ -2,6 +2,11 @@ import socket
 import logging
 import signal
 
+from .utils import Bet, load_bets, store_bets
+
+MSG_SEPARATOR = " "
+BET_SEPARATOR = "\t"
+
 class Server:
     def __init__(self, port, listen_backlog):
         # Initialize server socket
@@ -34,6 +39,12 @@ class Server:
         self.active = False
         self._server_socket.close()
 
+    def __handle_client_bet(self, bet_info):
+        agency, name, surname, document, birthday, number = bet_info.split(BET_SEPARATOR)
+        bet = Bet(agency, name, surname, document, birthday, number)
+        store_bets([bet])
+        logging.info(f'action: apuesta_almacenada | result: success | dni: ${document} | numero: ${number}')
+
     def __handle_client_connection(self, client_sock):
         """
         Read message from a specific client socket and closes the socket
@@ -42,12 +53,23 @@ class Server:
         client socket will also be closed
         """
         try:
-            # TODO: Modify the receive to avoid short-reads
             msg = client_sock.recv(1024).rstrip().decode('utf-8')
             addr = client_sock.getpeername()
+
+            logging.info(msg)
+            size, bet_info = msg.split(MSG_SEPARATOR)
+
             logging.info(f'action: receive_message | result: success | ip: {addr[0]} | msg: {msg}')
-            # TODO: Modify the send to avoid short-writes
-            client_sock.send("{}\n".format(msg).encode('utf-8'))
+            self.__handle_client_bet(bet_info)
+            client_sock.send("OK\n".encode('utf-8'))
+            
+            if len(msg) - 2 == int(size): # Check if the size is correct without the \n and the extra space
+                logging.info(f'action: receive_message | result: success | ip: {addr[0]} | msg: {msg}')
+                self.__handle_client_bet(bet_info)
+                client_sock.send("OK\n".encode('utf-8'))
+            else:
+                logging.info(f'action: receive_message | result: fail | expected bytes: {size} | received bytes: {len(msg)}')
+
         except OSError as e:
             logging.error("action: receive_message | result: fail | error: {e}")
         finally:
