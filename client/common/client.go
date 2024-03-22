@@ -62,6 +62,9 @@ func (c *Client) StartClientLoop() {
 
 	go func() {
 		<- sig_ch
+		log.Infof("action: sigterm_received | result: success | client_id: %v",
+			c.config.ID,
+		)
 		c.conn.Close()
 		done <- true
 	}()
@@ -106,9 +109,6 @@ func (c *Client) StartClientLoop() {
 
 				// Detect if a SIGTERM signal was received
 				case <- done:
-					log.Infof("action: sigterm_received | result: success | client_id: %v",
-						c.config.ID,
-					)
 					break loop
 
 				// Wait a time between sending one message and the next one
