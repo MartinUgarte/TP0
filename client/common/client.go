@@ -32,10 +32,9 @@ type Client struct {
 
 // NewClient Initializes a new client receiving the configuration
 // as a parameter
-func NewClient(config ClientConfig, bet *Bet) *Client {
+func NewClient(config ClientConfig) *Client {
 	client := &Client{
 		config: config,
-		bet: bet,
 	}
 	return client
 }
@@ -57,24 +56,26 @@ func (c *Client) createClientSocket() error {
 }
 
 // StartClientLoop Send messages to the client until some time threshold is met
-func (c *Client) StartClientLoop() {
+func (c *Client) StartClientLoop(bet *Bet) {
 	sig_ch := make(chan os.Signal, 1)
 	signal.Notify(sig_ch, syscall.SIGTERM)
 
-	sigterm_received := false 
+	done := make(chan bool, 1)
 
 	go func() {
 		<- sig_ch
-		log.Infof("Signal SIGTERM received")
-		sigterm_received = true
+		log.Infof("action: sigterm_received | result: success | client_id: %v",
+			c.config.ID,
+		)
+		c.conn.Close()
+		done <- true
 	}()
 
 	// Create the connection the server in every loop iteration. Send an
 	c.createClientSocket()
 
-	bet_info := c.bet.Serialize()
+	bet_info := bet.Serialize()
 	
-	log.Infof("id: %s | len id: %d", c.config.ID, len(c.config.ID))
 	message := fmt.Sprintf("%d%s%s", len(bet_info), SIZE_SEPARATOR, bet_info)
 
 	fmt.Fprintf(

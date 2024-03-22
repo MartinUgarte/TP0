@@ -123,7 +123,7 @@ func main() {
 
 	bet := GetBet()
 	
-	client := common.NewClient(clientConfig, bet)
+	client := common.NewClient(clientConfig)
 
-	client.StartClientLoop()
+	client.StartClientLoop(bet)
 }
