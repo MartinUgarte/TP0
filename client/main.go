@@ -97,7 +97,7 @@ func GetBet() *common.Bet {
 		os.Getenv("BIRTHDAY"),
 		os.Getenv("NUMBER"),
 	)
-	b.Log()
+
 	return b
 }
 

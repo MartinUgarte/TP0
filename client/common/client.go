@@ -55,21 +55,23 @@ func (c *Client) createClientSocket() error {
 	return nil
 }
 
-// StartClientLoop Send messages to the client until some time threshold is met
-func (c *Client) StartClientLoop(bet *Bet) {
+func (c *Client) startSignalHandler(done chan bool) {
 	sig_ch := make(chan os.Signal, 1)
 	signal.Notify(sig_ch, syscall.SIGTERM)
 
-	done := make(chan bool, 1)
-
 	go func() {
 		<- sig_ch
-		log.Infof("action: sigterm_received | result: success | client_id: %v",
-			c.config.ID,
-		)
 		c.conn.Close()
 		done <- true
 	}()
+}
+
+// StartClientLoop Send messages to the client until some time threshold is met
+func (c *Client) StartClientLoop(bet *Bet) {
+
+	// Start signal handler
+	done := make(chan bool, 1)
+	c.startSignalHandler(done)
 
 	// Create the connection the server in every loop iteration. Send an
 	c.createClientSocket()
@@ -80,6 +82,11 @@ func (c *Client) StartClientLoop(bet *Bet) {
 
 	fmt.Fprintf(
 		c.conn,
+		message,
+	)
+
+	log.Infof("action: send_message | result: success | client_id: %v | msg: %v",
+		c.config.ID,
 		message,
 	)
 
@@ -97,6 +104,6 @@ func (c *Client) StartClientLoop(bet *Bet) {
 
 	log.Infof("action: receive_message | result: success | client_id: %v | msg: %v",
 		c.config.ID,
-		msg,
+		msg[:len(msg)-1],
 	)
 }
