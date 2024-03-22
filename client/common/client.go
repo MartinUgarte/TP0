@@ -58,30 +58,17 @@ func (c *Client) StartClientLoop() {
 	sig_ch := make(chan os.Signal, 1)
 	signal.Notify(sig_ch, syscall.SIGTERM)
 
-	sigterm_received := false 
+	done := make(chan bool, 1)
 
 	go func() {
 		<- sig_ch
-		log.Infof("Signal SIGTERM received")
-		sigterm_received = true
+		c.conn.Close()
+		done <- true
 	}()
 
 	loop:
 		// Send messages if the loopLapse threshold has not been surpassed
 		for timeout := time.After(c.config.LoopLapse); ; {
-			select {
-				case <- timeout:
-					log.Infof("action: timeout_detected | result: success | client_id: %v",
-						c.config.ID,
-					)
-					break loop
-				default:
-			}
-
-			if sigterm_received {
-				log.Infof("Exiting loop due to SIGTERM")
-				break loop
-			}
 
 			// Create the connection the server in every loop iteration. Send an
 			c.createClientSocket()
@@ -109,8 +96,24 @@ func (c *Client) StartClientLoop() {
 				msg,
 			)
 
-			// Wait a time between sending one message and the next one
-			time.Sleep(c.config.LoopPeriod)
+			select {
+				// Detect if the loopLapse threshold has been surpassed
+				case <- timeout:
+					log.Infof("action: timeout_detected | result: success | client_id: %v",
+						c.config.ID,
+					)
+					break loop
+
+				// Detect if a SIGTERM signal was received
+				case <- done:
+					log.Infof("action: sigterm_received | result: success | client_id: %v",
+						c.config.ID,
+					)
+					break loop
+
+				// Wait a time between sending one message and the next one
+				case <- time.After(c.config.LoopPeriod):
+			}
 		}
 
 		log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
