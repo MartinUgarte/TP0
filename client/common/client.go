@@ -50,24 +50,25 @@ func (c *Client) createClientSocket() error {
 	return nil
 }
 
+func (c *Client) startSignalHandler(done chan bool) {
+	sig_ch := make(chan os.Signal, 1)
+	signal.Notify(sig_ch, syscall.SIGTERM)
+
+	go func() {
+		<- sig_ch
+		c.conn.Close()
+		done <- true
+	}()
+}
+
 // StartClientLoop Send messages to the client until some time threshold is met
 func (c *Client) StartClientLoop() {
 	// autoincremental msgID to identify every message sent
 	msgID := 1
-
-	sig_ch := make(chan os.Signal, 1)
-	signal.Notify(sig_ch, syscall.SIGTERM)
-
+	
+	// Start signal handler
 	done := make(chan bool, 1)
-
-	go func() {
-		<- sig_ch
-		log.Infof("action: sigterm_received | result: success | client_id: %v",
-			c.config.ID,
-		)
-		c.conn.Close()
-		done <- true
-	}()
+	c.startSignalHandler(done)
 
 	loop:
 		// Send messages if the loopLapse threshold has not been surpassed
@@ -109,6 +110,9 @@ func (c *Client) StartClientLoop() {
 
 				// Detect if a SIGTERM signal was received
 				case <- done:
+					log.Infof("action: sigterm_received | result: success | client_id: %v",
+						c.config.ID,
+					)
 					break loop
 
 				// Wait a time between sending one message and the next one
