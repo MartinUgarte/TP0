@@ -2,6 +2,8 @@ import socket
 import logging
 import signal
 
+from .connection import ClientConnection
+
 from .utils import Bet, store_bets
 
 BET_SEPARATOR = "\t"
@@ -29,7 +31,8 @@ class Server:
         while self.active:
             client_sock = self.__accept_new_connection()
             if self.active:
-                self.__handle_client_connection(client_sock)
+                client_conn = ClientConnection(client_sock, client_sock.getpeername())
+                self.__handle_client_connection(client_conn)
         
     def __handle_sigterm(self, signal, frame):
         """
@@ -48,49 +51,7 @@ class Server:
         store_bets([bet])
         logging.info(f'action: apuesta_almacenada | result: success | dni: ${document} | numero: ${number}')
 
-    def receive_client_message(self, client_sock):
-        """
-        Read message from a specific client socket, avoiding short-reads
-        """
-        header = client_sock.recv(3)
-        if not header:
-            logging.info('action: receive_message | result: fail | error while reading socket')
-            return
-
-        size = int(header.rstrip().decode('utf-8'))
-        msg = ""
-
-        while len(msg) < size:
-            chunk = client_sock.recv(size - len(msg))
-            if not chunk:
-                logging.info('action: receive_message | result: fail | error while reading socket')
-                return None
-            msg += chunk.decode('utf-8')
-        
-        addr = client_sock.getpeername()
-        logging.info(f'action: receive_message | result: success | ip: {addr[0]} | msg: {msg.rstrip()}')
-
-        return msg.rstrip()
-    
-    def send_message_to_client(self, client_sock, message):
-        """
-        Sends an ACK message to a specific client socket avoiding short-writes
-        """
-        total_sent = 0
-
-        while total_sent < len(message):
-            sent = client_sock.send(f'{message[total_sent:]}\n'.encode('utf-8'))
-            if sent == 0:
-                logging.info('action: send_ack | result: fail | error while sending message')
-                return False
-            total_sent += sent
-        
-        addr = client_sock.getpeername()
-        logging.info(f'action: send_message | result: success | ip: {addr[0]} | msg: {message}')
-
-        return True
-
-    def __handle_client_connection(self, client_sock):
+    def __handle_client_connection(self, client_conn):
         """
         Read message from a specific client socket and closes the socket
 
@@ -98,20 +59,14 @@ class Server:
         client socket will also be closed
         """
         try:
-            bet_info = self.receive_client_message(client_sock)
-            if not bet_info:
-                return
-                        
+            bet_info = client_conn.receive_message()
+            if not bet_info: return            
             self.__handle_client_bet(bet_info)
-
-            if not self.send_message_to_client(client_sock, ACK_MESSAGE):
-                return
-            
+            if not client_conn.send_message(ACK_MESSAGE): return   
         except OSError as e:
-            logging.info(f'action: receive_message | result: fail | error: {e}')
+            logging.error(f'action: receive_message | result: fail | error: {e}')
         finally:
-            client_sock.close()
-            logging.info('action: socket closed')
+            client_conn.close()
             
     def __accept_new_connection(self):
         """
@@ -128,6 +83,6 @@ class Server:
             logging.info(f'action: accept_connections | result: success | ip: {addr[0]}')
             return c
         except:
-            logging.info('Error reading server socket')
+            logging.error('Error reading server socket')
             return None
         

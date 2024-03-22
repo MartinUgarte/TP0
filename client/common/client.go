@@ -1,18 +1,12 @@
 package common
 
 import (
-	"bufio"
-	"fmt"
 	"net"
 	"time"
 	"os"
 	"os/signal"
 	"syscall"
 	log "github.com/sirupsen/logrus"
-)
-
-const (
-	SIZE_SEPARATOR = " "
 )
 
 // ClientConfig Configuration used by the client
@@ -55,14 +49,13 @@ func (c *Client) createClientSocket() error {
 	return nil
 }
 
-func (c *Client) startSignalHandler(done chan bool) {
+func (c *Client) startSignalHandler() {
 	sig_ch := make(chan os.Signal, 1)
 	signal.Notify(sig_ch, syscall.SIGTERM)
 
 	go func() {
 		<- sig_ch
 		c.conn.Close()
-		done <- true
 	}()
 }
 
@@ -70,40 +63,17 @@ func (c *Client) startSignalHandler(done chan bool) {
 func (c *Client) StartClientLoop(bet *Bet) {
 
 	// Start signal handler
-	done := make(chan bool, 1)
-	c.startSignalHandler(done)
+	c.startSignalHandler()
 
 	// Create the connection the server in every loop iteration. Send an
 	c.createClientSocket()
-
-	bet_info := bet.Serialize()
 	
-	message := fmt.Sprintf("%d%s%s", len(bet_info), SIZE_SEPARATOR, bet_info)
+	message := bet.Serialize()
 
-	fmt.Fprintf(
-		c.conn,
-		message,
-	)
-
-	log.Infof("action: send_message | result: success | client_id: %v | msg: %v",
-		c.config.ID,
-		message,
-	)
-
-	msg, err := bufio.NewReader(c.conn).ReadString('\n')
-	
-	c.conn.Close()
-
-	if err != nil {
-		log.Errorf("action: receive_message | result: fail | client_id: %v | error: %v",
-			c.config.ID,
-			err,
-		)
+	if !SendMessageToServer(message, c) {
+		c.conn.Close()
 		return
 	}
 
-	log.Infof("action: receive_message | result: success | client_id: %v | msg: %v",
-		c.config.ID,
-		msg[:len(msg)-1],
-	)
+	ReceiveServerMessage(c)
 }

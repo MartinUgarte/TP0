@@ -2,11 +2,13 @@ package common
 
 import (
 	"github.com/sirupsen/logrus"
+	"fmt"
 )
 
 const (
 	SEPARATOR = "\t"
 	NEWLINE = "\n"
+	END_HEADER = " "
 )
 
 type Bet struct {
@@ -41,5 +43,7 @@ func (b *Bet) Log() {
 }
 
 func (b *Bet) Serialize() string {
-	return b.Agency + SEPARATOR + b.Name + SEPARATOR + b.Surname + SEPARATOR + b.Document + SEPARATOR + b.Birthday + SEPARATOR + b.Number + NEWLINE
+	message := b.Agency + SEPARATOR + b.Name + SEPARATOR + b.Surname + SEPARATOR + b.Document + SEPARATOR + b.Birthday + SEPARATOR + b.Number + NEWLINE
+	header := len(message)
+	return fmt.Sprintf("%d%s", header, message)
 }
