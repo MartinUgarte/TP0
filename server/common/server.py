@@ -46,7 +46,7 @@ class Server:
         """
         Receives a bet from a client and stores it in the database
         """
-        agency, name, surname, document, birthday, number = bet_info.split(BET_SEPARATOR)
+        agency, name, surname, document, birthday, number = bet_info.split(",")
         bet = Bet(agency, name, surname, document, birthday, number)
         store_bets([bet])
         logging.info(f'action: apuesta_almacenada | result: success | dni: ${document} | numero: ${number}')

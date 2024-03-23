@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"strings"
 	"time"
-	"os"
-
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"

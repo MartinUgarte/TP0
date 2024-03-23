@@ -1,6 +1,8 @@
 import logging
 
-HEADER_LEN = 2
+HEADER_LEN = 4
+HEADER_SEPARATOR = "#"
+MAX_PACKAGE_SIZE = 8000
 
 class ClientConnection:
 
@@ -12,25 +14,29 @@ class ClientConnection:
         """
         Read message from a specific client socket, avoiding short-reads
         """
-        header = self.client_sock.recv(HEADER_LEN)
+        message = self.client_sock.recv(MAX_PACKAGE_SIZE).decode('utf-8')
         
-        if not header:
+        if not message:
             logging.error('action: receive_message | result: fail | error while reading socket')
             return
-
-        size = int(header.decode('utf-8'))
-        msg = b''
-
-        while len(msg) < size:
-            chunk = self.client_sock.recv(size - len(msg))
-            if not chunk:
-                logging.error('action: receive_message | result: fail | error while reading socket')
-                return None
-            msg += chunk
         
-        logging.info(f'action: receive_message | result: success | ip: {self.client_addr[0]} | msg: {msg.rstrip().decode("utf-8")}')
+        header, message = message.split(HEADER_SEPARATOR)
+        size = int(header)
+        full_message = message.encode('utf-8')
 
-        return msg.rstrip().decode('utf-8')
+        logging.info(f'action: receive_message | result: success | ip: {self.client_addr[0]} | header: {header} | msg: {message}')
+
+        while len(full_message) < size:
+            logging.info(f'action: incomplete_message | result: in_progress | ip: {self.client_addr[0]}')
+            chunk = self.client_sock.recv(size - len(full_message))
+            if not chunk:
+                logging.error('action: incomplete_message | result: fail | error while reading socket')
+                return None
+            full_message += chunk
+        
+        logging.info(f'action: receive_message | result: success | ip: {self.client_addr[0]} | msg: {full_message.rstrip().decode("utf-8")}')
+
+        return full_message.rstrip().decode('utf-8')
 
     def send_message(self, message):
         """
