@@ -142,8 +142,6 @@ func (c *Client) StartClientLoop() {
 
 	filename := fmt.Sprintf("agency-%s.csv", c.config.ID)
 
-	log.Infof("action: send_bets | result: in_progress | client_id: %v", c.config.ID)
-
 	if !c.readBetsFromFile(filename, sigterm) {
 		c.conn.Close()
 		return
