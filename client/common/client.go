@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"bufio"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -21,7 +22,6 @@ type ClientConfig struct {
 type Client struct {
 	config 	ClientConfig
 	conn   	net.Conn
-	bet		*Bet
 }
 
 // NewClient Initializes a new client receiving the configuration
@@ -60,6 +60,25 @@ func (c *Client) startSignalHandler() {
 	}()
 }
 
+// Reads bets from the agency file and sends them to the server using chunks
+func (c *Client) readBetsFromFile(filename string) bool {
+	// Open the file
+	file, err := os.Open(filename)
+	if err != nil {
+		log.Fatalf("action: open_file | result: fail | client_id: %v | error: %v", c.config)
+		return false
+	}
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		bet := NewBet(line)
+		// if !SendMessageToServer(bet.Serialize(), c) {
+		// 	return false
+		// }
+	
+	}
+}
+
 // StartClientLoop Send messages to the client until some time threshold is met
 func (c *Client) StartClientLoop() {
 
@@ -69,10 +88,11 @@ func (c *Client) StartClientLoop() {
 	// Create the connection the server in every loop iteration. Send an
 	c.createClientSocket()
 
-	if !SendMessageToServer(message, c) {
-		c.conn.Close()
-		return
-	}
+	c.readBetsFromFile(fmt.Stringf("agency_%s.txt", c.config.ID))
+	// if !SendMessageToServer(message, c) {
+	// 	c.conn.Close()
+	// 	return
+	// }
 
-	ReceiveServerMessage(c)
+	// ReceiveServerMessage(c)
 }
