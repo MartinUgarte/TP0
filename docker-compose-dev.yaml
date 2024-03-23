@@ -13,12 +13,12 @@ services:
     volumes:
       - ./server/config.ini:/config.ini
 
-  client0:
-    container_name: client0
+  client1:
+    container_name: client1
     image: client:latest
     entrypoint: /client
     environment:
-      - CLI_ID=0
+      - CLI_ID=1
       - CLI_LOG_LEVEL=DEBUG
       - NAME=Santiago
       - SURNAME=Lorca
@@ -31,13 +31,14 @@ services:
       - server
     volumes:
       - ./client/config.yaml:/config.yaml
+      - ./.data/agency-1.csv:/agency-1.csv
 
-  client1:
-    container_name: client1
+  client2:
+    container_name: client2
     image: client:latest
     entrypoint: /client
     environment:
-      - CLI_ID=1
+      - CLI_ID=2
       - CLI_LOG_LEVEL=DEBUG
       - NAME=Lautaro Valentin
       - SURNAME=Fornerón
@@ -50,13 +51,14 @@ services:
       - server
     volumes:
       - ./client/config.yaml:/config.yaml
+      - ./.data/agency-2.csv:/agency-2.csv
 
-  client2:
-    container_name: client2
+  client3:
+    container_name: client3
     image: client:latest
     entrypoint: /client
     environment:
-      - CLI_ID=2
+      - CLI_ID=3
       - CLI_LOG_LEVEL=DEBUG
       - NAME=Emanuel
       - SURNAME=Soto
@@ -69,13 +71,14 @@ services:
       - server
     volumes:
       - ./client/config.yaml:/config.yaml
+      - ./.data/agency-3.csv:/agency-3.csv
 
-  client3:
-    container_name: client3
+  client4:
+    container_name: client4
     image: client:latest
     entrypoint: /client
     environment:
-      - CLI_ID=3
+      - CLI_ID=4
       - CLI_LOG_LEVEL=DEBUG
       - NAME=Nicolas Andres 
       - SURNAME=Huarte
@@ -88,13 +91,14 @@ services:
       - server
     volumes:
       - ./client/config.yaml:/config.yaml
+      - ./.data/agency-4.csv:/agency-4.csv
 
-  client4:
-    container_name: client4
+  client5:
+    container_name: client5
     image: client:latest
     entrypoint: /client
     environment:
-      - CLI_ID=4
+      - CLI_ID=5
       - CLI_LOG_LEVEL=DEBUG
       - NAME=Valentina
       - SURNAME=Vera
@@ -107,6 +111,7 @@ services:
       - server
     volumes:
       - ./client/config.yaml:/config.yaml
+      - ./.data/agency-5.csv:/agency-5.csv
 
 networks:
   testing_net:

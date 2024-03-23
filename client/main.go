@@ -122,7 +122,8 @@ func main() {
 	}
 
 	bet := GetBet()
-	
+	sleep := time.Duration(10) * time.Second
+	time.Sleep(sleep)
 	client := common.NewClient(clientConfig)
 
 	client.StartClientLoop(bet)

@@ -20,12 +20,12 @@ NETWORKS = """networks:
 """
 
 def new_client(file, i):
-    file.write(f"""  client{i}:
-    container_name: client{i}
+    file.write(f"""  client{i+1}:
+    container_name: client{i+1}
     image: client:latest
     entrypoint: /client
     environment:
-      - CLI_ID={i}
+      - CLI_ID={i+1}
       - CLI_LOG_LEVEL=DEBUG
     networks:
       - testing_net
