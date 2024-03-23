@@ -13,11 +13,10 @@ import (
 )
 
 const (
-	MAX_BATCH_SIZE = 8000 // 8kB
-	BETS_PER_BATCH = 100
+	BETS_PER_BATCH = 160 // less than 8kB per batch 
 	HEADER_SEPARATOR = "#"
 	BET_SEPARATOR = "\t"
-	FLAG_SEPARATOR = "#"
+	FLAG_SEPARATOR = ","
 )
 
 // ClientConfig Configuration used by the client
@@ -77,8 +76,6 @@ func (c *Client) sendBetsToServer(bets []string, end bool) bool {
 	endflag := 0
 	if end { endflag = 1 }
 	message := fmt.Sprintf("%d%s%d%s%s", header, FLAG_SEPARATOR, endflag, HEADER_SEPARATOR, concatenated_bets)
-
-	log.Infof("action: send_message | client_id: %v | message: %v", c.config.ID, message)
 
 	if !SendMessageToServer(message, c) {
 		return false
@@ -145,10 +142,14 @@ func (c *Client) StartClientLoop() {
 
 	filename := fmt.Sprintf("agency-%s.csv", c.config.ID)
 
+	log.Infof("action: send_bets | result: in_progress | client_id: %v", c.config.ID)
+
 	if !c.readBetsFromFile(filename, sigterm) {
 		c.conn.Close()
 		return
 	}
+
+	log.Infof("action: send_bets | result: success | client_id: %v", c.config.ID)
 	
 	c.conn.Close()
 

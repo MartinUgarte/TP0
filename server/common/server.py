@@ -25,7 +25,7 @@ class Server:
         communication with a client. After client with communucation
         finishes, servers starts to accept new connections again
         """
-
+    
         signal.signal(signal.SIGTERM, self.__handle_sigterm)
 
         while self.active:
