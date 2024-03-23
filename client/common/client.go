@@ -55,6 +55,7 @@ func (c *Client) startSignalHandler() {
 
 	go func() {
 		<- sig_ch
+		log.Infof("action: sigterm_received | client_id: %v", c.config.ID)
 		c.conn.Close()
 	}()
 }
