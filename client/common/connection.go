@@ -30,8 +30,6 @@ func SendMessageToServer(message string, c *Client) bool {
 
 func ReceiveServerMessage(c *Client) (string, error) {
 	msg, err := bufio.NewReader(c.conn).ReadString('\n')
-
-	c.conn.Close()
 	
 	if err != nil {
 		log.Infof("action: receive_message | result: fail | client_id: %v | error: %v",

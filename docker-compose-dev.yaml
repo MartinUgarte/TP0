@@ -20,19 +20,74 @@ services:
     environment:
       - CLI_ID=1
       - CLI_LOG_LEVEL=DEBUG
-      - NAME=Santiago
-      - SURNAME=Lorca
-      - DOCUMENT=30904465
-      - BIRTHDAY=1999-03-17
-      - NUMBER=7574
     networks:
       - testing_net
     depends_on:
       - server
     volumes:
       - ./client/config.yaml:/config.yaml
-      - ./.data/agency-test.csv:/agency-test.csv
+      - ./.data/agency-1.csv:/agency-1.csv
 
+  client2:
+      container_name: client2
+      image: client:latest
+      entrypoint: /client
+      environment:
+        - CLI_ID=2
+        - CLI_LOG_LEVEL=DEBUG
+      networks:
+        - testing_net
+      depends_on:
+        - server
+      volumes:
+        - ./client/config.yaml:/config.yaml
+        - ./.data/agency-2.csv:/agency-2.csv
+
+  client3:
+      container_name: client3
+      image: client:latest
+      entrypoint: /client
+      environment:
+        - CLI_ID=3
+        - CLI_LOG_LEVEL=DEBUG
+      networks:
+        - testing_net
+      depends_on:
+        - server
+      volumes:
+        - ./client/config.yaml:/config.yaml
+        - ./.data/agency-3.csv:/agency-3.csv
+
+  client4:
+      container_name: client4
+      image: client:latest
+      entrypoint: /client
+      environment:
+        - CLI_ID=4
+        - CLI_LOG_LEVEL=DEBUG
+      networks:
+        - testing_net
+      depends_on:
+        - server
+      volumes:
+        - ./client/config.yaml:/config.yaml
+        - ./.data/agency-4.csv:/agency-4.csv
+
+  client5:
+      container_name: client5
+      image: client:latest
+      entrypoint: /client
+      environment:
+        - CLI_ID=5
+        - CLI_LOG_LEVEL=DEBUG
+      networks:
+        - testing_net
+      depends_on:
+        - server
+      volumes:
+        - ./client/config.yaml:/config.yaml
+        - ./.data/agency-5.csv:/agency-5.csv
+      
 networks:
   testing_net:
     ipam:

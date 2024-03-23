@@ -14,9 +14,10 @@ import (
 
 const (
 	MAX_BATCH_SIZE = 8000 // 8kB
-	BETS_PER_BATCH = 3
+	BETS_PER_BATCH = 100
 	HEADER_SEPARATOR = "#"
 	BET_SEPARATOR = "\t"
+	FLAG_SEPARATOR = "#"
 )
 
 // ClientConfig Configuration used by the client
@@ -75,11 +76,17 @@ func (c *Client) sendBetsToServer(bets []string, end bool) bool {
 	header := len(concatenated_bets)
 	endflag := 0
 	if end { endflag = 1 }
-	message := fmt.Sprintf("%d%s%d%s%s", header, HEADER_SEPARATOR, endflag, HEADER_SEPARATOR, concatenated_bets)
+	message := fmt.Sprintf("%d%s%d%s%s", header, FLAG_SEPARATOR, endflag, HEADER_SEPARATOR, concatenated_bets)
 
 	log.Infof("action: send_message | client_id: %v | message: %v", c.config.ID, message)
 
 	if !SendMessageToServer(message, c) {
+		return false
+	}
+
+	_, err := ReceiveServerMessage(c)
+
+	if err != nil {
 		return false
 	}
 
@@ -117,12 +124,6 @@ func (c *Client) readBetsFromFile(filename string, sigterm chan bool) bool {
 		}
 	
 		bets = []string{}
-
-		// select {
-		// 	case <- sigterm:
-		// 		return false
-		// 	case <- time.After(c.config.LoopLapse):
-		// }
 	}
 
 	if !c.sendBetsToServer(bets, true) {
@@ -142,14 +143,13 @@ func (c *Client) StartClientLoop() {
 	// Create the connection the server in every loop iteration. Send an
 	c.createClientSocket()
 
-	// filename := fmt.Sprintf("agency-%s.csv", c.config.ID)
-	filename := "agency-test.csv"
+	filename := fmt.Sprintf("agency-%s.csv", c.config.ID)
+
 	if !c.readBetsFromFile(filename, sigterm) {
 		c.conn.Close()
 		return
 	}
+	
+	c.conn.Close()
 
-	ReceiveServerMessage(c)
-
-	// ReceiveServerMessage(c)
 }
