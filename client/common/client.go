@@ -14,7 +14,7 @@ import (
 
 const (
 	MAX_BATCH_SIZE = 8000 // 8kB
-	BETS_PER_BATCH = 2
+	BETS_PER_BATCH = 3
 	HEADER_SEPARATOR = "#"
 	BET_SEPARATOR = "\t"
 )
@@ -58,7 +58,7 @@ func (c *Client) createClientSocket() error {
 	return nil
 }
 
-func (c *Client) startSignalHandler() {
+func (c *Client) startSignalHandler(sigterm chan bool) {
 	sig_ch := make(chan os.Signal, 1)
 	signal.Notify(sig_ch, syscall.SIGTERM)
 
@@ -66,13 +66,16 @@ func (c *Client) startSignalHandler() {
 		<- sig_ch
 		log.Infof("action: sigterm_received | client_id: %v", c.config.ID)
 		c.conn.Close()
+		sigterm <- true
 	}()
 }
 
-func (c *Client) sendBetsToServer(bets []string) bool {
+func (c *Client) sendBetsToServer(bets []string, end bool) bool {
 	concatenated_bets := strings.Join(bets, BET_SEPARATOR)
 	header := len(concatenated_bets)
-	message := fmt.Sprintf("%d%s%s", header, HEADER_SEPARATOR, concatenated_bets)
+	endflag := 0
+	if end { endflag = 1 }
+	message := fmt.Sprintf("%d%s%d%s%s", header, HEADER_SEPARATOR, endflag, HEADER_SEPARATOR, concatenated_bets)
 
 	log.Infof("action: send_message | client_id: %v | message: %v", c.config.ID, message)
 
@@ -84,7 +87,7 @@ func (c *Client) sendBetsToServer(bets []string) bool {
 }
 
 // Reads bets from the agency file and sends them to the server using chunks
-func (c *Client) readBetsFromFile(filename string) bool {
+func (c *Client) readBetsFromFile(filename string, sigterm chan bool) bool {
 
 	// Open the file
 	file, err := os.Open(filename)
@@ -93,6 +96,7 @@ func (c *Client) readBetsFromFile(filename string) bool {
 		file.Close()
 		return false
 	}
+	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
 
@@ -108,16 +112,20 @@ func (c *Client) readBetsFromFile(filename string) bool {
 			continue
 		}
 		
-		if !c.sendBetsToServer(bets) {
-			file.Close()
+		if !c.sendBetsToServer(bets, false) {
 			return false
 		}
-
+	
 		bets = []string{}
+
+		// select {
+		// 	case <- sigterm:
+		// 		return false
+		// 	case <- time.After(c.config.LoopLapse):
+		// }
 	}
 
-	if len(bets) > 0 && !c.sendBetsToServer(bets) {
-		file.Close()
+	if !c.sendBetsToServer(bets, true) {
 		return false
 	}
 
@@ -126,16 +134,17 @@ func (c *Client) readBetsFromFile(filename string) bool {
 
 // StartClientLoop Send messages to the client until some time threshold is met
 func (c *Client) StartClientLoop() {
+	sigterm := make(chan bool, 1)
 
 	// Start signal handler
-	c.startSignalHandler()
+	c.startSignalHandler(sigterm)
 
 	// Create the connection the server in every loop iteration. Send an
 	c.createClientSocket()
 
 	// filename := fmt.Sprintf("agency-%s.csv", c.config.ID)
 	filename := "agency-test.csv"
-	if !c.readBetsFromFile(filename) {
+	if !c.readBetsFromFile(filename, sigterm) {
 		c.conn.Close()
 		return
 	}

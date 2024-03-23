@@ -1,5 +1,6 @@
 import csv
 import datetime
+import logging
 import time
 
 """ Bets storage location. """
@@ -7,6 +8,7 @@ STORAGE_FILEPATH = "./bets.csv"
 """ Simulated winner number in the lottery contest. """
 LOTTERY_WINNER_NUMBER = 7574
 
+BET_SEPARATOR = "\t"
 
 """ A lottery bet registry. """
 class Bet:
@@ -48,3 +50,16 @@ def load_bets() -> list[Bet]:
         for row in reader:
             yield Bet(row[0], row[1], row[2], row[3], row[4], row[5])
 
+"""
+Receives a list of bets in string format and returns a list of Bet objects.
+"""
+def process_bets(bets_str) -> list[Bet]:
+    bets = []
+    bets_split = bets_str.split(BET_SEPARATOR)
+    if not bets_split:
+        return []
+    for bet in bets_split:
+        agency, name, surname, document, birthday, number = bet.split(',')
+        bets.append(Bet(agency, name, surname, document, birthday, number))
+        
+    return bets
