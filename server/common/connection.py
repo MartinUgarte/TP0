@@ -19,18 +19,18 @@ class ClientConnection:
             return
 
         size = int(header.decode('utf-8'))
-        msg = ""
+        msg = b''
 
         while len(msg) < size:
             chunk = self.client_sock.recv(size - len(msg))
             if not chunk:
                 logging.error('action: receive_message | result: fail | error while reading socket')
                 return None
-            msg += chunk.decode('utf-8')
+            msg += chunk
         
-        logging.info(f'action: receive_message | result: success | ip: {self.client_addr[0]} | msg: {msg.rstrip()}')
+        logging.info(f'action: receive_message | result: success | ip: {self.client_addr[0]} | msg: {msg.rstrip().decode("utf-8")}')
 
-        return msg.rstrip()
+        return msg.rstrip().decode('utf-8')
 
     def send_message(self, message):
         """

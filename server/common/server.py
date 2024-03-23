@@ -66,6 +66,7 @@ class Server:
         except OSError as e:
             logging.error(f'action: receive_message | result: fail | error: {e}')
         finally:
+            logging.info(f'action: close_connection | ip: {client_conn.client_addr[0]}')
             client_conn.close()
             
     def __accept_new_connection(self):

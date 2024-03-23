@@ -13,6 +13,25 @@ services:
     volumes:
       - ./server/config.ini:/config.ini
 
+  client0:
+    container_name: client0
+    image: client:latest
+    entrypoint: /client
+    environment:
+      - CLI_ID=0
+      - CLI_LOG_LEVEL=DEBUG
+      - NAME=Santiago
+      - SURNAME=Lorca
+      - DOCUMENT=30904465
+      - BIRTHDAY=1999-03-17
+      - NUMBER=7574
+    networks:
+      - testing_net
+    depends_on:
+      - server
+    volumes:
+      - ./client/config.yaml:/config.yaml
+
   client1:
     container_name: client1
     image: client:latest
@@ -20,11 +39,68 @@ services:
     environment:
       - CLI_ID=1
       - CLI_LOG_LEVEL=DEBUG
-      - NAME=Santiago
-      - SURNAME=Lorca
-      - DOCUMENT=30904465
-      - BIRTHDAY=1999-03-17
-      - NUMBER=7574
+      - NAME=Lautaro Valentin
+      - SURNAME=Fornerón
+      - DOCUMENT=23772524
+      - BIRTHDAY=1980-02-10
+      - NUMBER=9955
+    networks:
+      - testing_net
+    depends_on:
+      - server
+    volumes:
+      - ./client/config.yaml:/config.yaml
+
+  client2:
+    container_name: client2
+    image: client:latest
+    entrypoint: /client
+    environment:
+      - CLI_ID=2
+      - CLI_LOG_LEVEL=DEBUG
+      - NAME=Emanuel
+      - SURNAME=Soto
+      - DOCUMENT=22069151
+      - BIRTHDAY=2004-03-30
+      - NUMBER=2979
+    networks:
+      - testing_net
+    depends_on:
+      - server
+    volumes:
+      - ./client/config.yaml:/config.yaml
+
+  client3:
+    container_name: client3
+    image: client:latest
+    entrypoint: /client
+    environment:
+      - CLI_ID=3
+      - CLI_LOG_LEVEL=DEBUG
+      - NAME=Nicolas Andres 
+      - SURNAME=Huarte
+      - DOCUMENT=29369913
+      - BIRTHDAY=1989-12-05
+      - NUMBER=6857
+    networks:
+      - testing_net
+    depends_on:
+      - server
+    volumes:
+      - ./client/config.yaml:/config.yaml
+
+  client4:
+    container_name: client4
+    image: client:latest
+    entrypoint: /client
+    environment:
+      - CLI_ID=4
+      - CLI_LOG_LEVEL=DEBUG
+      - NAME=Valentina
+      - SURNAME=Vera
+      - DOCUMENT=30170921
+      - BIRTHDAY=1982-05-22
+      - NUMBER=6053
     networks:
       - testing_net
     depends_on:
