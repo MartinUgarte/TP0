@@ -43,7 +43,7 @@ func (b *Bet) Log() {
 }
 
 func (b *Bet) Serialize() string {
-	message := b.Agency + SEPARATOR + b.Name + SEPARATOR + b.Surname + SEPARATOR + b.Document + SEPARATOR + b.Birthday + SEPARATOR + b.Number + NEWLINE
+	message := strings.Join([b.Agency, b.Name, b.Surname, b.Document, b.Birthday, b.Number], SEPARATOR) + NEWLINE
 	header := len(message)
 	return fmt.Sprintf("%d%s", header, message)
 }

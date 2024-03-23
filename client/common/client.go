@@ -55,20 +55,19 @@ func (c *Client) startSignalHandler() {
 
 	go func() {
 		<- sig_ch
+		log.Infof("action: sigterm_received | client_id: %v", c.config.ID)
 		c.conn.Close()
 	}()
 }
 
 // StartClientLoop Send messages to the client until some time threshold is met
-func (c *Client) StartClientLoop(bet *Bet) {
+func (c *Client) StartClientLoop() {
 
 	// Start signal handler
 	c.startSignalHandler()
 
 	// Create the connection the server in every loop iteration. Send an
 	c.createClientSocket()
-	
-	message := bet.Serialize()
 
 	if !SendMessageToServer(message, c) {
 		c.conn.Close()

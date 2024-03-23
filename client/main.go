@@ -88,19 +88,6 @@ func PrintConfig(v *viper.Viper) {
     )
 }
 
-func GetBet() *common.Bet {
-	b := common.NewBet(
-		os.Getenv("CLI_ID"),
-		os.Getenv("NAME"),
-		os.Getenv("SURNAME"),
-		os.Getenv("DOCUMENT"),
-		os.Getenv("BIRTHDAY"),
-		os.Getenv("NUMBER"),
-	)
-
-	return b
-}
-
 func main() {
 	v, err := InitConfig()
 	if err != nil {
@@ -121,10 +108,7 @@ func main() {
 		LoopPeriod:    v.GetDuration("loop.period"),
 	}
 
-	bet := GetBet()
-	sleep := time.Duration(10) * time.Second
-	time.Sleep(sleep)
 	client := common.NewClient(clientConfig)
 
-	client.StartClientLoop(bet)
+	client.StartClientLoop()
 }
