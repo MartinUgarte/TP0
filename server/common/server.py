@@ -8,7 +8,9 @@ from .utils import load_bets, has_won
 
 BET_SEPARATOR = "\t"
 ALL_BETS_ACK = "ALL_BETS_ACK"
+END_WINNERS_ACK = "END_WINNERS_ACK"
 AGENCIES = 5
+HEADER_SEPARATOR = "#"
 
 class Server:
     def __init__(self, port, listen_backlog):
@@ -16,7 +18,7 @@ class Server:
         self._server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._server_socket.bind(('', port))
         self._server_socket.listen(listen_backlog)
-        self._client_conns = []
+        self._client_conns = {}
         self.active = True
 
     def run(self):
@@ -34,7 +36,6 @@ class Server:
             client_sock = self.__accept_new_connection()
             if self.active:
                 client_conn = ClientConnection(client_sock, client_sock.getpeername())
-                self._client_conns.append(client_conn)
                 self.__handle_client_connection(client_conn)
         
     def __handle_sigterm(self, signal, frame):
@@ -46,12 +47,18 @@ class Server:
         self._server_socket.close()
 
     def __receive_bets(self, client_conn):
+        """
+        Receives bets from a client and sends an acknowledgment message back to the client
+        """
         try:
-            client_conn.receive_messages()    
+            agency_number = client_conn.receive_messages()             
             logging.info(f'action: receive_all_bets | result: success | ip: {client_conn.client_addr[0]}')   
 
-            if not client_conn.send_message(ALL_BETS_ACK): return   
+            message = f'{len(ALL_BETS_ACK)}{HEADER_SEPARATOR}{ALL_BETS_ACK}'
+            if not client_conn.send_message(message): return   
             logging.info(f'action: send_all_bets_ack | result: succes | ip: {client_conn.client_addr[0]}')
+
+            self._client_conns[agency_number] = client_conn
 
             if len(self._client_conns) == AGENCIES:
                 return True
@@ -62,13 +69,35 @@ class Server:
             return False
 
     def __find_winners(self):
+        """
+        Returns the lottery winners
+        """
         winners = []
         for bet in load_bets():
             if has_won(bet):
                 winners.append(bet)
-        for winner in winners:
-            logging.info(f"action: get_winners | result: success | winner: {winner.first_name} {winner.last_name}")
+        return winners
 
+    def __send_winners(self, winners):
+        """
+        Sends the winners to all clients
+        """
+
+        for winner in winners:
+            try:
+                message = f'{len(winner.document)}{HEADER_SEPARATOR}{winner.document}'
+                self._client_conns[winner.agency].send_message(message)
+            except:
+                logging.error(f'Error sending winner to agency {winner.agency}')
+        
+        for agency_num, client_conn in self._client_conns.items():
+            try:
+                message = f'{len(END_WINNERS_ACK)}{HEADER_SEPARATOR}{END_WINNERS_ACK}'
+                client_conn.send_message(message)
+            except:
+                logging.error(f'Error sending ACK winner to agency {agency_num}')
+            client_conn.close()
+    
     def __handle_client_connection(self, client_conn):
         """
         Read message from a specific client socket and closes the socket
@@ -80,7 +109,12 @@ class Server:
         if not self.__receive_bets(client_conn):
             return
         
-        self.__find_winners()
+        logging.info(f'action: sorteo | result: success')
+        
+        winners = self.__find_winners()
+        self.__send_winners(winners)
+
+        logging.info(f'action: send_winners | result: success')
             
     def __accept_new_connection(self):
         """

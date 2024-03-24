@@ -17,6 +17,9 @@ const (
 	HEADER_SEPARATOR = "#"
 	BET_SEPARATOR = "\t"
 	FLAG_SEPARATOR = ","
+	END_WINNERS_ACK = "END_WINNERS_ACK"
+	MAX_PAYLOAD_SIZE = 7996 // 8kB - 4B del header
+
 )
 
 // ClientConfig Configuration used by the client
@@ -55,6 +58,7 @@ func (c *Client) createClientSocket() error {
 		)
 	}
 	c.conn = conn
+	log.Infof("action: connected to server | result: success")
 	return nil
 }
 
@@ -81,7 +85,7 @@ func (c *Client) sendBetsToServer(bets []string, end bool) bool {
 		return false
 	}
 
-	_, err := ReceiveServerMessage(c)
+	_, err := ReceiveServerMessage(c) // Receives chunk's ACK
 
 	if err != nil {
 		return false
@@ -130,6 +134,24 @@ func (c *Client) readBetsFromFile(filename string, sigterm chan bool) bool {
 	return true
 }
 
+func (c *Client) ReceiveWinners() {
+	winners := 0
+	for {
+		message, err := ReceiveServerMessage(c)
+		if err != nil {
+			log.Infof("action: receive_winners | result: fail | client_id: %v | error: %v", c.config.ID, err)
+			return
+		}
+
+		if message == END_WINNERS_ACK {
+			log.Infof("action: consulta_ganadores | result: success | cant_ganadores: ${%v}", winners)
+			break
+		}
+
+		winners += 1
+	}
+}
+
 // StartClientLoop Send messages to the client until some time threshold is met
 func (c *Client) StartClientLoop() {
 	sigterm := make(chan bool, 1)
@@ -149,6 +171,7 @@ func (c *Client) StartClientLoop() {
 
 	log.Infof("action: send_bets | result: success | client_id: %v", c.config.ID)
 	
+	c.ReceiveWinners()
 	c.conn.Close()
 
 }

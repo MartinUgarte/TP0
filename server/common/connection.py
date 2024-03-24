@@ -19,22 +19,25 @@ class ClientConnection:
         """
         
         size, end, message = self.receive_message()
-        
-        while not int(end):    
+        agency = int(message[0])
+
+        while not end:    
             full_message = self.avoid_short_read(message, size)
             bets = process_bets(full_message)
             store_bets(bets)
-            self.send_message(CHUNK_ACK)
+            self.send_message(f'{len(CHUNK_ACK)}{HEADER_SEPARATOR}{CHUNK_ACK}')
             size, end, message = self.receive_message()
         
         if message:
             full_message = self.avoid_short_read(message, size)
             bets = process_bets(full_message)
             store_bets(bets)
+        
+        return agency
 
     def receive_message(self):
         size, flag = self.read_header()
-        chunk = self.client_sock.recv(MAX_PAYLOAD_SIZE).decode('utf-8')   
+        chunk = self.client_sock.recv(size).decode('utf-8')   
 
         if not chunk:
             logging.error('action: receive_chunk | result: fail | error while reading socket')
@@ -47,11 +50,10 @@ class ClientConnection:
         while read != HEADER_SEPARATOR:
             message += read
             read = self.client_sock.recv(1).decode('utf-8')
-        header, flag = message.split(FLAG_SEPARATOR)
-        return header, flag
+        size, flag = message.split(FLAG_SEPARATOR)
+        return int(size), int(flag)
 
-    def avoid_short_read(self, message, header):
-        size = int(header)
+    def avoid_short_read(self, message, size):
         full_message = message.encode('utf-8')
 
         while len(full_message) < size:
