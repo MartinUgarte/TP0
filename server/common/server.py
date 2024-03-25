@@ -3,6 +3,7 @@ import logging
 import signal
 
 from .connection import ClientConnection
+from multiprocessing import Process, Lock, Pipe
 
 from .utils import load_bets, has_won
 
@@ -19,7 +20,8 @@ class Server:
         self._server_socket.bind(('', port))
         self._server_socket.listen(listen_backlog)
         self._client_conns = {}
-        self.active = True
+        self._active = True
+        self._processes = []
 
     def run(self):
         """
@@ -31,51 +33,70 @@ class Server:
         """
     
         signal.signal(signal.SIGTERM, self.__handle_sigterm)
+        write_lock = Lock()
 
-        while self.active:
+        while self._active:
             client_sock = self.__accept_new_connection()
-            if self.active:
+            if self._active:
                 client_conn = ClientConnection(client_sock, client_sock.getpeername())
-                self.__handle_client_connection(client_conn)
+                rx, tx = Pipe()
+                process = Process(target=self.__handle_client_connection, args=(client_conn, tx, write_lock))
+                self._processes.append(process)
+                process.start()
+                agency_number = rx.recv()
+                self._client_conns[agency_number] = client_conn
+
+                if len(self._client_conns) == AGENCIES:
+                    self.handle_draw()
+                    break
+
+        self.join_processes()
+    
+    def handle_draw(self):
+        logging.info(f'action: sorteo | result: success')
+
+        winners = self.__find_winners()
+
+        if not self.__send_winners(winners):
+            return
         
+        logging.info(f'action: send_winners | result: success')
+
+    def join_processes(self): 
+        """
+        Join active processes
+        """
+        for process in self._processes:
+            process.join()
+        logging.info(f'action: join_processes | result: success')  
+
     def __handle_sigterm(self, signal, frame):
         """
         Handles a SIGTERM signal by stopping the server loop and closing its socket
         """
-        logging.info("Signal SIGTERM received")
-        self.active = False
+        logging.info("action: sigterm_received | result: success")
+        self._active = False
         self._server_socket.close()
-
-    def __receive_bets(self, client_conn):
-        """
-        Receives bets from a client and sends an acknowledgment message back to the client
-        """
-        try:
-            agency_number = client_conn.receive_messages()             
-            logging.info(f'action: receive_all_bets | result: success | ip: {client_conn.client_addr[0]}')   
-
-            message = f'{len(ALL_BETS_ACK)}{HEADER_SEPARATOR}{ALL_BETS_ACK}'
-            if not client_conn.send_message(message): return   
-            logging.info(f'action: send_all_bets_ack | result: succes | ip: {client_conn.client_addr[0]}')
-
-            self._client_conns[agency_number] = client_conn
-
-            if len(self._client_conns) == AGENCIES:
-                return True
-
-        except OSError as e:
-            logging.error(f'action: receive_message | result: fail | error: {e}')
+        for client_conn in self._client_conns.values():
             client_conn.close()
+        
+    def __send_all_bets_ack(self, client_conn):
+        message = f'{len(ALL_BETS_ACK)}{HEADER_SEPARATOR}{ALL_BETS_ACK}'
+        if not client_conn.send_message(message): 
             return False
-
+        logging.info(f'action: send_all_bets_ack | result: succes | ip: {client_conn.client_addr[0]}')
+        return True
+    
     def __find_winners(self):
         """
         Returns the lottery winners
         """
         winners = []
+
         for bet in load_bets():
             if has_won(bet):
                 winners.append(bet)
+    
         return winners
 
     def __send_winners(self, winners):
@@ -89,6 +110,7 @@ class Server:
                 self._client_conns[winner.agency].send_message(message)
             except:
                 logging.error(f'Error sending winner to agency {winner.agency}')
+                return False
         
         for agency_num, client_conn in self._client_conns.items():
             try:
@@ -96,9 +118,12 @@ class Server:
                 client_conn.send_message(message)
             except:
                 logging.error(f'Error sending ACK winner to agency {agency_num}')
+                return False
             client_conn.close()
+
+        return True
     
-    def __handle_client_connection(self, client_conn):
+    def __handle_client_connection(self, client_conn, tx, write_lock):
         """
         Read message from a specific client socket and closes the socket
 
@@ -106,15 +131,19 @@ class Server:
         client socket will also be closed
         """
 
-        if not self.__receive_bets(client_conn):
-            return
-        
-        logging.info(f'action: sorteo | result: success')
-        
-        winners = self.__find_winners()
-        self.__send_winners(winners)
+        try:
+            agency_number = client_conn.receive_messages(write_lock)          
+            logging.info(f'action: receive_all_bets | result: success | ip: {client_conn.client_addr[0]}')   
 
-        logging.info(f'action: send_winners | result: success')
+            if self.__send_all_bets_ack(client_conn):
+                tx.send(agency_number)
+
+        except OSError as e:
+            logging.error(f'action: receive_message | result: fail | error: {e}')
+            client_conn.close()
+        
+        finally:
+            return False
             
     def __accept_new_connection(self):
         """

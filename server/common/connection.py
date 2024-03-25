@@ -1,6 +1,7 @@
 import logging
 
 from .utils import process_bets, store_bets
+from multiprocessing import Lock
 
 HEADER_SEPARATOR = "#"
 FLAG_SEPARATOR = ","
@@ -13,7 +14,7 @@ class ClientConnection:
         self.client_sock = socket
         self.client_addr = addr
 
-    def receive_messages(self):
+    def receive_messages(self, write_lock):
         """
         Read message from a specific client socket, avoiding short-reads
         """
@@ -24,14 +25,18 @@ class ClientConnection:
         while not end:    
             full_message = self.avoid_short_read(message, size)
             bets = process_bets(full_message)
+            write_lock.acquire()
             store_bets(bets)
+            write_lock.release()
             self.send_message(f'{len(CHUNK_ACK)}{HEADER_SEPARATOR}{CHUNK_ACK}')
             size, end, message = self.receive_message()
         
         if message:
             full_message = self.avoid_short_read(message, size)
             bets = process_bets(full_message)
+            write_lock.acquire()
             store_bets(bets)
+            write_lock.release()
         
         return agency
 
