@@ -18,8 +18,6 @@ const (
 	BET_SEPARATOR = "\t"
 	FLAG_SEPARATOR = ","
 	END_WINNERS_ACK = "END_WINNERS_ACK"
-	MAX_PAYLOAD_SIZE = 7996 // 8kB - 4B del header
-
 )
 
 // ClientConfig Configuration used by the client
@@ -74,6 +72,7 @@ func (c *Client) startSignalHandler(sigterm chan bool) {
 	}()
 }
 
+// Sends the bets read to the server
 func (c *Client) sendBetsToServer(bets []string, end bool) bool {
 	concatenated_bets := strings.Join(bets, BET_SEPARATOR)
 	header := len(concatenated_bets)
@@ -134,6 +133,7 @@ func (c *Client) readBetsFromFile(filename string, sigterm chan bool) bool {
 	return true
 }
 
+// Receives winners after the draw has been made by the server
 func (c *Client) ReceiveWinners() {
 	winners := 0
 	for {
