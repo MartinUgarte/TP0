@@ -38,10 +38,13 @@ class Server:
                 client_conn = ClientConnection(client_sock, client_sock.getpeername())
                 self.__handle_client_connection(client_conn)
 
+        self.__close_sockets()
+
     def __close_sockets(self):
         """
         Close all active sockets
         """
+
         for client_conn in self._client_conns.values():
             client_conn.close()
         logging.info(f'action: close_sockets | result: success')
@@ -50,15 +53,16 @@ class Server:
         """
         Handles a SIGTERM signal by stopping the server loop and closing its socket
         """
+
         logging.info("Signal SIGTERM received")
         self.active = False
         self._server_socket.close()
-        self.__close_sockets()
 
     def __find_winners(self):
         """
         Returns the lottery winners
         """
+
         winners = []
         for bet in load_bets():
             if has_won(bet):
@@ -73,20 +77,12 @@ class Server:
 
         for winner in winners:
             message = f'{len(winner.document)}{HEADER_SEPARATOR}{winner.document}'
-            if not self._client_conns[winner.agency].send_message(message):
-                logging.error(f'Error sending winner to agency {winner.agency}')
-                return False
-        
-        for agency_num, client_conn in self._client_conns.items():
+            self._client_conns[winner.agency].send_message(message)
+        for client_conn in self._client_conns.values():
             message = f'{len(END_WINNERS_ACK)}{HEADER_SEPARATOR}{END_WINNERS_ACK}'
-            if not client_conn.send_message(message):
-                logging.error(f'Error sending END_WINNERS ACK to agency {agency_num}')
-                return False                
-
+            client_conn.send_message(message)
         logging.info(f'action: send_winners | result: success')
-
-        return True
-    
+                  
     def __handle_client_connection(self, client_conn):
         """
         Read message from a specific client socket and closes the socket
@@ -95,22 +91,25 @@ class Server:
         client socket will also be closed
         """
 
-        agency_number = client_conn.receive_messages()
+        try:
+            agency_number = client_conn.receive_messages()
 
-        if not agency_number:
-            logging.info(f'action: receive_all_bets | result: fail | ip: {client_conn.client_addr[0]}')
-            return 
+            logging.info(f'action: receive_all_bets | result: success | ip: {client_conn.client_addr[0]}')
+
+            self._client_conns[agency_number] = client_conn
+
+            if len(self._client_conns) != AGENCIES:
+                return
+
+            winners = self.__find_winners()
+            self.__send_winners(winners)
+
+        except Exception as e:
+            logging.error(str(e))
         
-        logging.info(f'action: receive_all_bets | result: success | ip: {client_conn.client_addr[0]}')
+        self.active = False
+        self._server_socket.close()
 
-        self._client_conns[agency_number] = client_conn
-
-        if len(self._client_conns) != AGENCIES:
-            return
-        
-        winners = self.__find_winners()
-        self.__send_winners(winners)
-  
     def __accept_new_connection(self):
         """
         Accept new connections

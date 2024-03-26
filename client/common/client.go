@@ -18,8 +18,6 @@ const (
 	BET_SEPARATOR = "\t"
 	FLAG_SEPARATOR = ","
 	END_WINNERS_ACK = "END_WINNERS_ACK"
-	MAX_PAYLOAD_SIZE = 7996 // 8kB - 4B del header
-
 )
 
 // ClientConfig Configuration used by the client
@@ -62,7 +60,7 @@ func (c *Client) createClientSocket() error {
 	return nil
 }
 
-func (c *Client) startSignalHandler(sigterm chan bool) {
+func (c *Client) startSignalHandler() {
 	sig_ch := make(chan os.Signal, 1)
 	signal.Notify(sig_ch, syscall.SIGTERM)
 
@@ -70,7 +68,6 @@ func (c *Client) startSignalHandler(sigterm chan bool) {
 		<- sig_ch
 		log.Infof("action: sigterm_received | client_id: %v", c.config.ID)
 		c.conn.Close()
-		sigterm <- true
 	}()
 }
 
@@ -95,7 +92,7 @@ func (c *Client) sendBetsToServer(bets []string, end bool) bool {
 }
 
 // Reads bets from the agency file and sends them to the server using chunks
-func (c *Client) readBetsFromFile(filename string, sigterm chan bool) bool {
+func (c *Client) readBetsFromFile(filename string) bool {
 
 	// Open the file
 	file, err := os.Open(filename)
@@ -154,17 +151,16 @@ func (c *Client) ReceiveWinners() {
 
 // StartClientLoop Send messages to the client until some time threshold is met
 func (c *Client) StartClientLoop() {
-	sigterm := make(chan bool, 1)
 
 	// Start signal handler
-	c.startSignalHandler(sigterm)
+	c.startSignalHandler()
 
 	// Create the connection the server in every loop iteration. Send an
 	c.createClientSocket()
 
 	filename := fmt.Sprintf("agency-%s.csv", c.config.ID)
 
-	if !c.readBetsFromFile(filename, sigterm) {
+	if !c.readBetsFromFile(filename) {
 		c.conn.Close()
 		return
 	}
