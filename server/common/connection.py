@@ -6,7 +6,6 @@ from multiprocessing import Lock
 HEADER_SEPARATOR = "#"
 FLAG_SEPARATOR = ","
 CHUNK_ACK = "CHUNK_ACK"
-MAX_PAYLOAD_SIZE = 7996 # 8kB - 4B del header
 
 class ClientConnection:
 
@@ -20,7 +19,6 @@ class ClientConnection:
         """
         
         end, message = self.receive_message()
-        if not message: return None
         
         agency = int(message[0])
 
@@ -42,7 +40,7 @@ class ClientConnection:
         store_bets(bets)
         write_lock.release()
         ack_message = f'{len(CHUNK_ACK)}{HEADER_SEPARATOR}{CHUNK_ACK}'
-        if not self.send_message(ack_message): return None
+        self.send_message(ack_message)
 
     def receive_message(self):
         """
@@ -53,8 +51,7 @@ class ClientConnection:
         chunk = self.client_sock.recv(size).decode('utf-8')   
 
         if not chunk:
-            logging.error('action: receive_chunk | result: fail | error while reading socket')
-            return None
+            raise Exception('action: receive_chunk | result: fail | error while reading socket')
         return flag, self.avoid_short_read(chunk, size)
 
     def read_header(self):
@@ -67,6 +64,8 @@ class ClientConnection:
         while read != HEADER_SEPARATOR:
             message += read
             read = self.client_sock.recv(1).decode('utf-8')
+            if not read:
+                raise Exception('action: read_header | result: fail | error while reading socket')
         size, flag = message.split(FLAG_SEPARATOR)
         return int(size), int(flag)
 
@@ -80,8 +79,7 @@ class ClientConnection:
         while len(full_message) < size:
             chunk = self.client_sock.recv(size - len(full_message))
             if not chunk:
-                logging.error('action: incomplete_message | result: fail | error while reading socket')
-                return None
+                raise Exception('action: incomplete_message | result: fail | error while reading socket')
             full_message += chunk
 
         return full_message.rstrip().decode('utf-8')
@@ -95,10 +93,12 @@ class ClientConnection:
         while total_sent < len(message):
             sent = self.client_sock.send(f'{message[total_sent:]}\n'.encode('utf-8'))
             if sent == 0:
-                return False
+                raise Exception('action: send_ack | result: fail | error while sending message')
             total_sent += sent
-
-        return True
     
     def close(self):
+        """
+        Closes the client socket
+        """
+
         self.client_sock.close()
