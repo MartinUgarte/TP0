@@ -4,11 +4,6 @@ import signal
 
 from .connection import ClientConnection
 
-from .utils import Bet, store_bets
-
-BET_SEPARATOR = "\t"
-ACK_MESSAGE = "ACK"
-
 class Server:
     def __init__(self, port, listen_backlog):
         # Initialize server socket
@@ -64,7 +59,7 @@ class Server:
             document, number = client_conn.receive_message()
             logging.info(f'action: apuesta_almacenada | result: success | dni: ${document} | numero: ${number}')
         except Exception as e:
-            logging.error(e)
+            logging.error(str(e))
         
         client_conn.close()
             

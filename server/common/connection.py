@@ -28,8 +28,9 @@ class ClientConnection:
         """
         Returns the message payload
         """
+
         size  = self.read_header()
-        chunk = self.client_sock.recv(size).decode('utf-8')   
+        chunk = self.client_sock.recv(size).decode('utf-8') 
 
         if not chunk:
             raise Exception('action: receive_chunk | result: fail | error while reading socket')
@@ -70,19 +71,21 @@ class ClientConnection:
         """
         Sends an ACK message to a specific client socket avoiding short-writes
         """
+
         total_sent = 0
 
         while total_sent < len(message):
             sent = self.client_sock.send(f'{message[total_sent:]}\n'.encode('utf-8'))
             if sent == 0:
-                logging.error('action: send_ack | result: fail | error while sending message')
-                return False
+                raise Exception('action: send_ack | result: fail | error while sending message')
             total_sent += sent
         
         addr = self.client_sock.getpeername()
         logging.info(f'action: send_message | result: success | ip: {addr[0]} | msg: {message}')
-
-        return True
     
     def close(self):
+        """
+        Closes the client socket
+        """
+
         self.client_sock.close()
