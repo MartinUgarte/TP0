@@ -4,6 +4,8 @@ import signal
 
 from .connection import ClientConnection
 
+AGENCIES = 5
+
 class Server:
     def __init__(self, port, listen_backlog):
         # Initialize server socket
@@ -36,6 +38,7 @@ class Server:
         """
         Close all active sockets
         """
+
         for client_conn in self._client_conns:
             client_conn.close()
         logging.info(f'action: close_sockets | result: success')
@@ -44,6 +47,7 @@ class Server:
         """
         Handles a SIGTERM signal by stopping the server loop and closing its socket
         """
+
         logging.info("Signal SIGTERM received")
         self.active = False
         self._server_socket.close()
@@ -55,13 +59,16 @@ class Server:
         If a problem arises in the communication with the client, the
         client socket will also be closed
         """
+        
         try:
             document, number = client_conn.receive_message()
             logging.info(f'action: apuesta_almacenada | result: success | dni: ${document} | numero: ${number}')
         except Exception as e:
             logging.error(str(e))
         
-        client_conn.close()
+        if len(self._client_conns) == AGENCIES:
+            self.active = False
+            self._server_socket.close()
             
     def __accept_new_connection(self):
         """
