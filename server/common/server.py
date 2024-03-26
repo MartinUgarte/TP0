@@ -37,6 +37,14 @@ class Server:
             if self.active:
                 client_conn = ClientConnection(client_sock, client_sock.getpeername())
                 self.__handle_client_connection(client_conn)
+
+    def __close_sockets(self):
+        """
+        Close all active sockets
+        """
+        for client_conn in self._client_conns.values():
+            client_conn.close()
+        logging.info(f'action: close_sockets | result: success')
         
     def __handle_sigterm(self, signal, frame):
         """
@@ -45,28 +53,7 @@ class Server:
         logging.info("Signal SIGTERM received")
         self.active = False
         self._server_socket.close()
-
-    def __receive_bets(self, client_conn):
-        """
-        Receives bets from a client and sends an acknowledgment message back to the client
-        """
-        try:
-            agency_number = client_conn.receive_messages()             
-            logging.info(f'action: receive_all_bets | result: success | ip: {client_conn.client_addr[0]}')   
-
-            message = f'{len(ALL_BETS_ACK)}{HEADER_SEPARATOR}{ALL_BETS_ACK}'
-            if not client_conn.send_message(message): return   
-            logging.info(f'action: send_all_bets_ack | result: succes | ip: {client_conn.client_addr[0]}')
-
-            self._client_conns[agency_number] = client_conn
-
-            if len(self._client_conns) == AGENCIES:
-                return True
-
-        except OSError as e:
-            logging.error(f'action: receive_message | result: fail | error: {e}')
-            client_conn.close()
-            return False
+        self.__close_sockets()
 
     def __find_winners(self):
         """
@@ -76,6 +63,7 @@ class Server:
         for bet in load_bets():
             if has_won(bet):
                 winners.append(bet)
+        logging.info(f'action: sorteo | result: success')
         return winners
 
     def __send_winners(self, winners):
@@ -84,19 +72,20 @@ class Server:
         """
 
         for winner in winners:
-            try:
-                message = f'{len(winner.document)}{HEADER_SEPARATOR}{winner.document}'
-                self._client_conns[winner.agency].send_message(message)
-            except:
+            message = f'{len(winner.document)}{HEADER_SEPARATOR}{winner.document}'
+            if not self._client_conns[winner.agency].send_message(message):
                 logging.error(f'Error sending winner to agency {winner.agency}')
+                return False
         
         for agency_num, client_conn in self._client_conns.items():
-            try:
-                message = f'{len(END_WINNERS_ACK)}{HEADER_SEPARATOR}{END_WINNERS_ACK}'
-                client_conn.send_message(message)
-            except:
-                logging.error(f'Error sending ACK winner to agency {agency_num}')
-            client_conn.close()
+            message = f'{len(END_WINNERS_ACK)}{HEADER_SEPARATOR}{END_WINNERS_ACK}'
+            if not client_conn.send_message(message):
+                logging.error(f'Error sending END_WINNERS ACK to agency {agency_num}')
+                return False                
+
+        logging.info(f'action: send_winners | result: success')
+
+        return True
     
     def __handle_client_connection(self, client_conn):
         """
@@ -106,16 +95,22 @@ class Server:
         client socket will also be closed
         """
 
-        if not self.__receive_bets(client_conn):
-            return
+        agency_number = client_conn.receive_messages()
+
+        if not agency_number:
+            logging.info(f'action: receive_all_bets | result: fail | ip: {client_conn.client_addr[0]}')
+            return 
         
-        logging.info(f'action: sorteo | result: success')
+        logging.info(f'action: receive_all_bets | result: success | ip: {client_conn.client_addr[0]}')
+
+        self._client_conns[agency_number] = client_conn
+
+        if len(self._client_conns) != AGENCIES:
+            return
         
         winners = self.__find_winners()
         self.__send_winners(winners)
-
-        logging.info(f'action: send_winners | result: success')
-            
+  
     def __accept_new_connection(self):
         """
         Accept new connections

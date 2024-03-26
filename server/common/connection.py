@@ -18,33 +18,47 @@ class ClientConnection:
         Read message from a specific client socket, avoiding short-reads
         """
         
-        size, end, message = self.receive_message()
+        end, message = self.receive_message()
+        if not message: return None
+
         agency = int(message[0])
 
         while not end:    
-            full_message = self.avoid_short_read(message, size)
-            bets = process_bets(full_message)
-            store_bets(bets)
-            self.send_message(f'{len(CHUNK_ACK)}{HEADER_SEPARATOR}{CHUNK_ACK}')
-            size, end, message = self.receive_message()
+            self.process_message(message)
+            end, message = self.receive_message()
         
-        if message:
-            full_message = self.avoid_short_read(message, size)
-            bets = process_bets(full_message)
-            store_bets(bets)
+        if message: self.process_message(message)
         
         return agency
 
+    def process_message(self, message):
+        """
+        Decodes the message transforming it into bets and stores them
+        """
+        
+        bets = process_bets(message)
+        store_bets(bets)
+        ack_message = f'{len(CHUNK_ACK)}{HEADER_SEPARATOR}{CHUNK_ACK}'
+        if not self.send_message(ack_message): return None
+
     def receive_message(self):
+        """
+        Receives the message by separating it into header and payload
+        """
+
         size, flag = self.read_header()
         chunk = self.client_sock.recv(size).decode('utf-8')   
 
         if not chunk:
             logging.error('action: receive_chunk | result: fail | error while reading socket')
-            return
-        return size, flag, chunk
+            return None
+        return flag, self.avoid_short_read(chunk, size)
 
     def read_header(self):
+        """
+        Reads the message header
+        """
+
         message = ""
         read = self.client_sock.recv(1).decode('utf-8') 
         while read != HEADER_SEPARATOR:
@@ -54,6 +68,10 @@ class ClientConnection:
         return int(size), int(flag)
 
     def avoid_short_read(self, message, size):
+        """
+        Avoids short read
+        """
+
         full_message = message.encode('utf-8')
 
         while len(full_message) < size:
@@ -74,7 +92,6 @@ class ClientConnection:
         while total_sent < len(message):
             sent = self.client_sock.send(f'{message[total_sent:]}\n'.encode('utf-8'))
             if sent == 0:
-                logging.error('action: send_ack | result: fail | error while sending message')
                 return False
             total_sent += sent
 
