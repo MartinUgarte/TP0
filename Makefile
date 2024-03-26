@@ -37,3 +37,7 @@ docker-compose-down:
 docker-compose-logs:
 	docker compose -f docker-compose-dev.yaml logs -f
 .PHONY: docker-compose-logs
+
+ej3: docker-compose-up
+	cd ej3 && ./ej3.sh
+.PHONY: ej3
