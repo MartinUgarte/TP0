@@ -26,8 +26,6 @@ class ClientConnection:
 
         while not end:    
             self.process_message(message, write_lock)
-            ack_message = f'{len(CHUNK_ACK)}{HEADER_SEPARATOR}{CHUNK_ACK}'
-            if not self.send_message(ack_message): return None
             end, message = self.receive_message()
         
         if message: self.process_message(message, write_lock)
@@ -38,10 +36,13 @@ class ClientConnection:
         """
         Decodes the message transforming it into bets and stores them
         """
+        
         bets = process_bets(message)
         write_lock.acquire()
         store_bets(bets)
         write_lock.release()
+        ack_message = f'{len(CHUNK_ACK)}{HEADER_SEPARATOR}{CHUNK_ACK}'
+        if not self.send_message(ack_message): return None
 
     def receive_message(self):
         """

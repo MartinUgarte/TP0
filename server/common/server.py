@@ -98,17 +98,7 @@ class Server:
         logging.info("action: sigterm_received | result: success")
         self._active = False
         self._server_socket.close()
-        
-    def __send_all_bets_ack(self, client_conn):
-        """
-        Sends an ACK to client to indicate that all bets have been received
-        """
-
-        message = f'{len(ALL_BETS_ACK)}{HEADER_SEPARATOR}{ALL_BETS_ACK}'
-        if not client_conn.send_message(message): 
-            return False
-        return True
-    
+            
     def __find_winners(self):
         """
         Returns the lottery winners
@@ -154,14 +144,7 @@ class Server:
             return
 
         logging.info(f'action: receive_all_bets | result: success | ip: {client_conn.client_addr[0]}')   
-
-        if not self.__send_all_bets_ack(client_conn):
-            logging.info(f'action: send_all_bets_ack | result: fail | ip: {client_conn.client_addr[0]}')
-            self.__send_to_parent(None, tx)
-            return 
-        
-        logging.info(f'action: send_all_bets_ack | result: success | ip: {client_conn.client_addr[0]}')
-        
+                
         self.__send_to_parent(agency_number, tx)
 
     def __send_to_parent(self, message, tx):
