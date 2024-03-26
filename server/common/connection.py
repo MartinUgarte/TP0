@@ -5,7 +5,6 @@ from .utils import process_bets, store_bets
 HEADER_SEPARATOR = "#"
 FLAG_SEPARATOR = ","
 CHUNK_ACK = "CHUNK_ACK"
-MAX_PAYLOAD_SIZE = 7996 # 8kB - 4B del header
 
 class ClientConnection:
 
@@ -18,47 +17,63 @@ class ClientConnection:
         Read message from a specific client socket, avoiding short-reads
         """
         
-        size, end, message = self.receive_message()
-        
+        end, message = self.receive_message()
+
         while not int(end):    
-            full_message = self.avoid_short_read(message, size)
-            bets = process_bets(full_message)
-            store_bets(bets)
-            self.send_message(CHUNK_ACK)
-            size, end, message = self.receive_message()
+            self.process_message(message)
+            end, message = self.receive_message()
         
-        if message:
-            full_message = self.avoid_short_read(message, size)
-            bets = process_bets(full_message)
-            store_bets(bets)
+        if message: self.process_message(message)
+
+    def process_message(self, message):
+        """
+        Decodes the message transforming it into bets and stores them
+        """
+        
+        bets = process_bets(message)
+        store_bets(bets)
+        ack_message = f'{len(CHUNK_ACK)}{HEADER_SEPARATOR}{CHUNK_ACK}'
+        self.send_message(ack_message)
 
     def receive_message(self):
+        """
+        Decodes the message transforming it into bets and stores them
+        """
+
         size, flag = self.read_header()
-        chunk = self.client_sock.recv(MAX_PAYLOAD_SIZE).decode('utf-8')   
+        chunk = self.client_sock.recv(size).decode('utf-8')   
 
         if not chunk:
-            logging.error('action: receive_chunk | result: fail | error while reading socket')
-            return
-        return size, flag, chunk
+            raise Exception('action: receive_chunk | result: fail | error while reading socket')
+        
+        return flag, self.avoid_short_read(chunk, size)
 
     def read_header(self):
+        """
+        Reads the message header
+        """
+
         message = ""
         read = self.client_sock.recv(1).decode('utf-8') 
         while read != HEADER_SEPARATOR:
             message += read
             read = self.client_sock.recv(1).decode('utf-8')
-        header, flag = message.split(FLAG_SEPARATOR)
-        return header, flag
+            if not read:
+                raise Exception('action: read_header | result: fail | error while reading socket')
+        size, flag = message.split(FLAG_SEPARATOR)
+        return int(size), int(flag)
 
-    def avoid_short_read(self, message, header):
-        size = int(header)
+    def avoid_short_read(self, message, size):
+        """
+        Avoids short read
+        """
+         
         full_message = message.encode('utf-8')
 
         while len(full_message) < size:
             chunk = self.client_sock.recv(size - len(full_message))
             if not chunk:
-                logging.error('action: incomplete_message | result: fail | error while reading socket')
-                return None
+                raise Exception('action: incomplete_message | result: fail | error while reading socket')
             full_message += chunk
 
         return full_message.rstrip().decode('utf-8')
@@ -72,11 +87,8 @@ class ClientConnection:
         while total_sent < len(message):
             sent = self.client_sock.send(f'{message[total_sent:]}\n'.encode('utf-8'))
             if sent == 0:
-                logging.error('action: send_ack | result: fail | error while sending message')
-                return False
+                raise Exception('action: send_ack | result: fail | error while sending message')
             total_sent += sent
-
-        return True
     
     def close(self):
         self.client_sock.close()

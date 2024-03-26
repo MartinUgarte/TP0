@@ -4,8 +4,6 @@ import signal
 
 from .connection import ClientConnection
 
-from .utils import Bet, store_bets
-
 BET_SEPARATOR = "\t"
 ALL_BETS_ACK = "ALL_BETS_ACK"
 
@@ -15,6 +13,7 @@ class Server:
         self._server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._server_socket.bind(('', port))
         self._server_socket.listen(listen_backlog)
+        self._client_conns = []
         self.active = True
 
     def run(self):
@@ -32,8 +31,19 @@ class Server:
             client_sock = self.__accept_new_connection()
             if self.active:
                 client_conn = ClientConnection(client_sock, client_sock.getpeername())
+                self._client_conns.append(client_conn)
                 self.__handle_client_connection(client_conn)
-        
+
+        self.__close_sockets()
+
+    def __close_sockets(self):
+        """
+        Close all active sockets
+        """
+        for client_conn in self._client_conns:
+            client_conn.close()
+        logging.info(f'action: close_sockets | result: success')
+
     def __handle_sigterm(self, signal, frame):
         """
         Handles a SIGTERM signal by stopping the server loop and closing its socket
@@ -51,18 +61,12 @@ class Server:
         """
 
         try:
-            client_conn.receive_messages()    
-            logging.info(f'action: receive_all_bets | result: success | ip: {client_conn.client_addr[0]}')   
+            client_conn.receive_messages()
+            logging.info(f'action: receive_all_bets | result: success | ip: {client_conn.client_addr[0]}')  
+        except Exception:
+            logging.info(f'action: receive_all_bets | result: success | ip: {client_conn.client_addr[0]}')              
 
-            if not client_conn.send_message(ALL_BETS_ACK): return   
-            logging.info(f'action: send_all_bets_ack | result: succes | ip: {client_conn.client_addr[0]}')
-
-        except OSError as e:
-            logging.error(f'action: receive_message | result: fail | error: {e}')
-
-        finally:
-            logging.info(f'action: close_connection | ip: {client_conn.client_addr[0]}')
-            client_conn.close()
+        client_conn.close()
             
     def __accept_new_connection(self):
         """

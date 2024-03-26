@@ -55,6 +55,7 @@ func (c *Client) createClientSocket() error {
 		)
 	}
 	c.conn = conn
+	log.Infof("action: connected to server | result: success")
 	return nil
 }
 
