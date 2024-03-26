@@ -94,4 +94,8 @@ class ClientConnection:
             total_sent += sent
     
     def close(self):
+        """
+        Closes the client socket
+        """
+        
         self.client_sock.close()
