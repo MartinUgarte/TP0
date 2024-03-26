@@ -8,6 +8,8 @@ SERVER = """  server:
       - LOGGING_LEVEL=DEBUG
     networks:
       - testing_net\n
+    volumes:
+      - ./server/config.ini:/config.ini
 """
 NETWORKS = """networks:
   testing_net:
@@ -28,7 +30,9 @@ def new_client(file, i):
     networks:
       - testing_net
     depends_on:
-      - server\n\n""")
+      - server
+    volumes:
+      - ./client/config.yaml:/config.yaml\n\n""")
 
 
 def main(): 
