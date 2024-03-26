@@ -37,7 +37,7 @@ class ClientConnection:
 
     def receive_message(self):
         """
-        Returns the message payload
+        Receives the message by separating it into header and payload
         """
 
         size, flag = self.read_header()
