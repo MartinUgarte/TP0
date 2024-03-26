@@ -5,7 +5,6 @@ import signal
 from .connection import ClientConnection
 
 BET_SEPARATOR = "\t"
-ALL_BETS_ACK = "ALL_BETS_ACK"
 
 class Server:
     def __init__(self, port, listen_backlog):
@@ -63,8 +62,8 @@ class Server:
         try:
             client_conn.receive_messages()
             logging.info(f'action: receive_all_bets | result: success | ip: {client_conn.client_addr[0]}')  
-        except Exception:
-            logging.info(f'action: receive_all_bets | result: success | ip: {client_conn.client_addr[0]}')              
+        except Exception as e:
+            logging.info(str(e))              
 
         client_conn.close()
             

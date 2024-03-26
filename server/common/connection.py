@@ -37,7 +37,7 @@ class ClientConnection:
 
     def receive_message(self):
         """
-        Decodes the message transforming it into bets and stores them
+        Returns the message payload
         """
 
         size, flag = self.read_header()
