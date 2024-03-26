@@ -15,6 +15,7 @@ class Server:
         self._server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._server_socket.bind(('', port))
         self._server_socket.listen(listen_backlog)
+        self._client_conns = []
         self.active = True
 
     def run(self):
@@ -34,6 +35,16 @@ class Server:
                 client_conn = ClientConnection(client_sock, client_sock.getpeername())
                 self.__handle_client_connection(client_conn)
         
+        self.__close_sockets()
+
+    def __close_sockets(self):
+        """
+        Close all active sockets
+        """
+        for client_conn in self._client_conns:
+            client_conn.close()
+        logging.info(f'action: close_sockets | result: success')
+
     def __handle_sigterm(self, signal, frame):
         """
         Handles a SIGTERM signal by stopping the server loop and closing its socket
@@ -41,15 +52,6 @@ class Server:
         logging.info("Signal SIGTERM received")
         self.active = False
         self._server_socket.close()
-
-    def __handle_client_bet(self, bet_info):
-        """
-        Receives a bet from a client and stores it in the database
-        """
-        agency, name, surname, document, birthday, number = bet_info.split(BET_SEPARATOR)
-        bet = Bet(agency, name, surname, document, birthday, number)
-        store_bets([bet])
-        logging.info(f'action: apuesta_almacenada | result: success | dni: ${document} | numero: ${number}')
 
     def __handle_client_connection(self, client_conn):
         """
@@ -59,15 +61,12 @@ class Server:
         client socket will also be closed
         """
         try:
-            bet_info = client_conn.receive_message()
-            if not bet_info: return            
-            self.__handle_client_bet(bet_info)
-            if not client_conn.send_message(ACK_MESSAGE): return   
-        except OSError as e:
-            logging.error(f'action: receive_message | result: fail | error: {e}')
-        finally:
-            logging.info(f'action: close_connection | ip: {client_conn.client_addr[0]}')
-            client_conn.close()
+            document, number = client_conn.receive_message()
+            logging.info(f'action: apuesta_almacenada | result: success | dni: ${document} | numero: ${number}')
+        except Exception as e:
+            logging.error(e)
+        
+        client_conn.close()
             
     def __accept_new_connection(self):
         """

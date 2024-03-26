@@ -71,9 +71,23 @@ func (c *Client) StartClientLoop(bet *Bet) {
 	message := bet.Serialize()
 
 	if !SendMessageToServer(message, c) {
+		log.Infof("action: receive_message | result: fail | client_id: %v", c.config.ID)
 		c.conn.Close()
 		return
 	}
 
-	ReceiveServerMessage(c)
+	log.Infof("action: send_message | result: success | client_id: %v", c.config.ID)
+
+	_, err := ReceiveServerMessage(c)
+
+	if err != nil {
+		log.Infof("action: receive_ack | result: fail | client_id: %v", c.config.ID)
+		c.conn.Close()
+		return
+	
+	}
+
+	log.Infof("action: receive_ack | result: success | client_id: %v", c.config.ID)
+
+	c.conn.Close()
 }

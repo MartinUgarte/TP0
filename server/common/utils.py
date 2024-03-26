@@ -1,6 +1,5 @@
 import csv
 import datetime
-import time
 
 """ Bets storage location. """
 STORAGE_FILEPATH = "./bets.csv"
@@ -48,3 +47,9 @@ def load_bets() -> list[Bet]:
         for row in reader:
             yield Bet(row[0], row[1], row[2], row[3], row[4], row[5])
 
+"""
+Receives a list of bets in string format and returns a list of Bet objects.
+"""
+def process_bet(bet_str) -> Bet:
+    agency, name, surname, document, birthday, number = bet_str.split(',')
+    return Bet(agency, name, surname, document, birthday, number)

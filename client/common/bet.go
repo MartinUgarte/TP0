@@ -1,16 +1,14 @@
 package common 
 
 import (
-	"github.com/sirupsen/logrus"
 	"fmt"
+	"strings"
 )
 
 const (
-	SEPARATOR = "\t"
-	NEWLINE = "\n"
-	END_HEADER = " "
+	FIELD_SEPARATOR = ","
+	HEADER_SEPARATOR = "#"
 )
-
 type Bet struct {
 	Agency	 string
 	Name     string
@@ -31,19 +29,8 @@ func NewBet(agency string, name string, surname string, document string, birthda
 	}
 }
 
-func (b *Bet) Log() {
-	logrus.Infof("Bet info | agency: %v | name: %v | surname: %v | document: %v | birthday: %v | number: %v",
-		b.Agency,
-		b.Name,
-		b.Surname,
-		b.Document,
-		b.Birthday,
-		b.Number,
-	)
-}
-
 func (b *Bet) Serialize() string {
-	message := b.Agency + SEPARATOR + b.Name + SEPARATOR + b.Surname + SEPARATOR + b.Document + SEPARATOR + b.Birthday + SEPARATOR + b.Number + NEWLINE
+	message := strings.Join([]string{b.Agency, b.Name, b.Surname, b.Document, b.Birthday, b.Number}, FIELD_SEPARATOR)
 	header := len(message)
-	return fmt.Sprintf("%d%s", header, message)
+	return fmt.Sprintf("%d%s%s", header, HEADER_SEPARATOR, message)
 }

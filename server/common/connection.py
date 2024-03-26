@@ -1,6 +1,9 @@
 import logging
 
-HEADER_LEN = 2
+from .utils import process_bet, store_bets
+
+HEADER_SEPARATOR = "#"
+MSG_ACK = "MSG_ACK"
 
 class ClientConnection:
 
@@ -12,26 +15,57 @@ class ClientConnection:
         """
         Read message from a specific client socket, avoiding short-reads
         """
-        header = self.client_sock.recv(HEADER_LEN)
         
-        if not header:
-            logging.error('action: receive_message | result: fail | error while reading socket')
-            return
+        message = self.read_message()
+        bet = process_bet(message)
+        store_bets([bet])
+        ack_message = f'{len(MSG_ACK)}{HEADER_SEPARATOR}{MSG_ACK}'
+        self.send_message(ack_message)
 
-        size = int(header.decode('utf-8'))
-        msg = b''
+        return bet.document, bet.number
 
-        while len(msg) < size:
-            chunk = self.client_sock.recv(size - len(msg))
+    def read_message(self):
+        """
+        Returns the message payload
+        """
+        size  = self.read_header()
+        chunk = self.client_sock.recv(size).decode('utf-8')   
+
+        if not chunk:
+            raise Exception('action: receive_chunk | result: fail | error while reading socket')
+        
+        return self.avoid_short_read(chunk, size)
+    
+    def read_header(self):
+        """
+        Reads the message header
+        """
+
+        message = ""
+        read = self.client_sock.recv(1).decode('utf-8') 
+        while read != HEADER_SEPARATOR:
+            message += read
+            read = self.client_sock.recv(1).decode('utf-8')
+            if not read:
+                raise Exception('action: read_header | result: fail | error while reading socket')
+            
+        return int(message)
+
+    def avoid_short_read(self, message, size):
+        """
+        Avoids short read
+        """
+         
+        full_message = message.encode('utf-8')
+
+        while len(full_message) < size:
+            chunk = self.client_sock.recv(size - len(full_message))
             if not chunk:
-                logging.error('action: receive_message | result: fail | error while reading socket')
-                return None
-            msg += chunk
-        
-        logging.info(f'action: receive_message | result: success | ip: {self.client_addr[0]} | msg: {msg.rstrip().decode("utf-8")}')
+                raise Exception('action: incomplete_message | result: fail | error while reading socket')
+            full_message += chunk
 
-        return msg.rstrip().decode('utf-8')
-
+        return full_message.rstrip().decode('utf-8')
+    
     def send_message(self, message):
         """
         Sends an ACK message to a specific client socket avoiding short-writes
