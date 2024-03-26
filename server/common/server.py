@@ -74,6 +74,7 @@ class Server:
         """
         Join active processes and close all sockets
         """
+        
         for process in self._processes:
             process.join()
         logging.info(f'action: join_processes | result: success')  
