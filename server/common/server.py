@@ -6,8 +6,6 @@ from .connection import ClientConnection
 
 from .utils import load_bets, has_won
 
-BET_SEPARATOR = "\t"
-ALL_BETS_ACK = "ALL_BETS_ACK"
 END_WINNERS_ACK = "END_WINNERS_ACK"
 AGENCIES = 5
 HEADER_SEPARATOR = "#"
